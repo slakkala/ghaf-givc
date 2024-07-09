@@ -3,6 +3,7 @@ use givc::admin::client::AdminClient;
 use givc::endpoint::{EndpointConfig, TlsConfig};
 use givc::pb;
 use givc::systemd_api::server::SystemdService;
+use givc::hwid_api::server::HwIdServiceServer;
 use givc::types::*;
 use givc::utils::naming::*;
 use std::net::SocketAddr;
@@ -39,6 +40,9 @@ struct Cli {
 
     #[arg(long, env = "HOST_KEY")]
     host_key: Option<PathBuf>,
+
+    #[arg(long, env = "WIFI")]
+    wifi: Option<String>,
 
     #[arg(long, env = "ADMIN_SERVER_ADDR", default_missing_value = "127.0.0.1")]
     admin_server_addr: String,
@@ -129,7 +133,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         SystemdService::new(),
     );
 
-    builder
+    let wifi_service_svc = cli.wifi.map(|wifi| pb::hwid::hwid_service_server::HwidServiceServer::new(
+        HwIdServiceServer::new(wifi),
+    ));
+
+    let builder = builder
         .add_service(reflect)
         .add_service(agent_service_svc)
         .serve(addr)

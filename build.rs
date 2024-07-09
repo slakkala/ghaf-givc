@@ -1,17 +1,15 @@
 use std::env;
 use std::path::PathBuf;
 
-fn main() {
-    let proto = "api/admin/admin.proto";
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+    for proto in ["admin", "systemd", "hwid"].into_iter() {
+        let outpath = out_dir.join(format!("{proto}_descriptor.bin"));
+        let inpath = format!("api/{proto}/{proto}.proto");
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    tonic_build::configure()
-        .file_descriptor_set_path(out_dir.join("admin_descriptor.bin"))
-        .compile(&["api/admin/admin.proto"], &["admin"])
-        .unwrap();
-
-    tonic_build::configure()
-        .file_descriptor_set_path(out_dir.join("systemd_descriptor.bin"))
-        .compile(&["api/systemd/systemd.proto"], &["systemd"])
-        .unwrap();
+        tonic_build::configure()
+            .file_descriptor_set_path(out_dir.join(outpath))
+            .compile(&[inpath], &[proto])?;
+    }
+    Ok(())
 }
