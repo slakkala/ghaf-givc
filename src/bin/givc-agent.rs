@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use clap::Parser;
 use givc::admin::client::AdminClient;
 use givc::endpoint::{EndpointConfig, TlsConfig};
@@ -136,12 +137,28 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         SystemdService::new(),
     );
 
-    let hwid_service_svc = cli
-        .hwid_iface
-        .filter(|w| cli.hwid && w.is_empty())
-        .map(|wifi| {
-            pb::hwid::hwid_service_server::HwidServiceServer::new(HwIdServiceServer::new(wifi))
-        });
+    let hwid_service_svc = if cli.hwid {
+        match cli.hwid_iface.filter(|i| !i.is_empty()) {
+            None => Some(
+                std::fs::read_dir("/sys/class/net")?
+                    .flat_map(|i| {
+                        i.ok()?
+                            .file_name()
+                            .to_str()
+                            .filter(|f| f.starts_with("wl"))
+                            .map(ToString::to_string)
+                    })
+                    .next()
+                    .ok_or(anyhow!("Could not find device"))?,
+            ),
+            some => some,
+        }
+    } else {
+        None
+    }
+    .map(|wifi| {
+        pb::hwid::hwid_service_server::HwidServiceServer::new(HwIdServiceServer::new(wifi))
+    });
 
     builder
         .add_service(reflect)
