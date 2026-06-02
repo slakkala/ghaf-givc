@@ -232,6 +232,10 @@ in
         default = { };
         description = "Ghaf policy rules mapped to actions.";
       };
+
+      vm.enable = mkEnableOption ''
+        Running VM management service
+      '';
     };
 
     debug = mkEnableOption ''
